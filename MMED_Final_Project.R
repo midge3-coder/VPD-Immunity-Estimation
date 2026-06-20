@@ -18,3 +18,27 @@ plot(cleaned_coordinates, main = "Cleaned Student Coordinates", xlab = "Latitude
 #cleaned version of the data frame with only complete cases
 cleaned_school <- school[complete.cases(school), ]
 
+
+
+#code that generates synthetic coordinates based on the cleaned data to get an idea of how we can simulate outbreaks
+linear_regression_coordinates <- lm(lat ~ lon, data = cleaned_school)
+
+synthetic_coordinates <- data.frame(
+  lon = runif(n = 1000, min = min(cleaned_school$lon), max = max(cleaned_school$lon))
+)
+
+mu <- predict(linear_regression_coordinates,
+              newdata = synthetic_coordinates)
+
+sigma <- summary(linear_regression_coordinates)$sigma
+
+simulated_lat <- mu + rnorm(length(mu), mean = 0, sd = sigma)
+
+simulated_coordinates <- data.frame(
+  lon = synthetic_coordinates$lon,
+  lat = simulated_lat
+)
+
+plot(simulated_coordinates, main = "Simulated Student Coordinates", xlab = "Longitude", ylab = "Latitude", pch = 19, col = "red")
+
+

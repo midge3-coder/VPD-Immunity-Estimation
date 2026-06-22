@@ -5,14 +5,19 @@ library(plyr)
 #step 1: load the data
 
 
-school <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/all-schools.csv")
+# Define base directory (change as needed; here assumes script run from project root, or set to your data root)
+base_dir <- file.path("data")
+derived_dir <- file.path(base_dir, "derived")
 
-nc_locations <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/derived/nc_locations.csv")
+school <- read.csv(file.path(base_dir, "all-schools.csv"))
 
-nc_observations <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/derived/nc_observations.csv")
+nc_locations <- read.csv(file.path(derived_dir, "nc_locations.csv"),
+                         na.strings = c("", "NA"))
+
+nc_observations <- read.csv(file.path(derived_dir, "nc_observations.csv"))
 setDT(nc_observations)
 
-nc_populations <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/derived/nc_populations.csv")
+nc_populations <- read.csv(file.path(derived_dir, "nc_populations.csv"))
 
 canonical_locations <-canonicalize_locations(nc_locations)
 

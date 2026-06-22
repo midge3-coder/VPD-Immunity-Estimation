@@ -3,6 +3,8 @@ library(data.table)
 library(plyr)
 
 #step 1: load the data
+
+
 school <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/all-schools.csv")
 
 nc_locations <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data/derived/nc_locations.csv")
@@ -16,30 +18,35 @@ canonical_locations <-canonicalize_locations(nc_locations)
 
 canonical_observations <- canonicalize_observations(nc_observations)
 
-canonical_populations <- canonicalize_populations(nc_populations, nc_populations, nc_observations, nc_locations)
+canonical_populations <- canonicalize_populations(populations = nc_populations, observations = nc_observations, locations = nc_locations)
+
 
 head(canonical_observations)
 
 head(canonical_locations)
 
-head(canonical_population)
+head(canonical_populations)
+
+max_layer <- max(canonical_locations$layer)
+
+head(nc_locations)
+
+layer_4_list <- canonical_locations[layer == max_layer, loc_id]
 
 
-#step 2
 
-invalid_obs <- copy(nc_observations[, .(obs_id, loc_id, positive, sample_n, censored)])
-invalid_obs[1, positive := sample_n + 10]
+### fit the model
 
-# This will fail validation and throw an error:
-tryCatch(
-  canonicalize_observations(invalid_obs),
-  error = function(e) message("Caught expected error: ", e$message)
+
+fit_sim <- sampling(
+  
+  nc_observations,
+  nc_populations,
+  nc_locations,
+  stan_opts = stan_options(
+    iter = 2000, chains = 4, refresh = 0, seed = 1L
+  )
 )
-
-data("observations_sim", package = "imuGAP")
-head(observations_sim[, .(obs_id, loc_id, positive, sample_n, censored)])
-
-# Canonicalize and validate
 canonical_observations <- canonicalize_observations(observations_sim)
 head(canonical_observations)
 

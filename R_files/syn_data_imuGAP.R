@@ -1,6 +1,7 @@
 library(imuGAP)
 library(data.table)
 library(plyr)
+library(ggplot2)
 
 #step 1: load the data
 

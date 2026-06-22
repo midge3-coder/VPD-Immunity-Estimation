@@ -1,0 +1,394 @@
+## data-raw/fit_sim.R
+## Fully self-contained: no external RDS file required.
+
+library(dplyr)
+library(splines)
+library(data.table)
+library(EnvStats)
+library(imuGAP)
+
+
+############### Simulate data for North Carolina ####################
+
+set.seed(93254)
+
+n_yr     <- 33
+n_cohort <- 30
+phi_st   <- c(
+  0.8401733, 0.8458791, 0.8515769, 0.8572586, 0.8629160,
+  0.8685411, 0.8741259, 0.8796623, 0.8851422, 0.8905575,
+  0.8958959, 0.9011275, 0.9062182, 0.9111339, 0.9158404,
+  0.9203035, 0.9244892, 0.9283632, 0.9318916, 0.9350400,
+  0.9377351, 0.9397467, 0.9408054, 0.9407130, 0.9395576,
+  0.9375024, 0.9347246, 0.9314054, 0.9277256, 0.9298663
+)
+
+lambda   <- c(2.8, 3.0)
+n_doses  <- length(lambda)
+
+sigma_sch  <- 0.8
+sigma_cnty <- 0.4
+
+other_vax_reduction <- 0.95
+
+# Dose schedule
+dose_schedule <- c(1, 4)
+doses <- matrix(0, ncol = length(dose_schedule), nrow = n_yr)
+for (i in seq_along(dose_schedule)) {
+  doses[(dose_schedule[i] + 1):nrow(doses), i] <- 1
+}
+
+cov <- matrix(nrow = n_yr, ncol = n_doses)
+cov[1, ] <- 0
+
+for (d in seq_len(n_doses)) {
+  ref      <- if (d == 1L) rep(1, n_yr) else cov[, d - 1L]
+  survival <- (1 - exp(-lambda[d] * doses[, d]))
+  for (i in 2:n_yr) {
+    cov[i, d] <- cov[i - 1, d] + (ref[i] - cov[i - 1, d]) * survival[i]
+  }
+}
+
+# ---------------------------------------------------------------------------
+# School counts per county
+#
+# Previously derived from ../nc_measles/output/NC/cleaned_data.rds by
+# filtering to three NC counties (Haywood = 44, Jackson = 50, Transylvania = 88)
+# and counting school records in year 2024.
+#
+# The RDS file is not part of this package, so we replace that step with
+# a lightweight synthetic table.  Values approximate real public-school
+# counts for these small mountain counties; they must sum to at most
+# length(school_names) = 24.
+#
+# Adjust `n_sch` here if you want more or fewer schools per county.
+# ---------------------------------------------------------------------------
+n_counties <- 3L   # Haywood / Jackson / Transylvania
+sch_per_cnty <- data.frame(
+  enc_unit_id = seq_len(n_counties),
+  n_sch       = c(9L, 8L, 7L)   # total = 24, matches length(school_names)
+)
+
+cnty_offset <- rnorm(nrow(sch_per_cnty), 0, sigma_cnty)
+sch_offset  <- rnorm(sum(sch_per_cnty$n_sch), 0, sigma_sch)
+
+# Simulate child vax view
+n24 <- round(runif(n_cohort, 250, 450))
+n36 <- round(runif(n_cohort, 250, 450))
+sim_child <- bind_rows(
+  data.frame(
+    pop  = "child",
+    Year = 1:n_cohort,
+    Age  = "24 months",
+    X    = rbinom(n_cohort, n24, phi_st * cov[2, 1] * other_vax_reduction),
+    N    = n24
+  ),
+  data.frame(
+    pop  = "child",
+    Year = 1:n_cohort,
+    Age  = "36 months",
+    X    = rbinom(n_cohort, n36, phi_st * cov[3, 1] * other_vax_reduction),
+    N    = n36
+  )
+)
+sim_child$censored <- 1
+
+# Simulate teen vax view
+teen_yrs <- 18:30
+sim_teen <- data.frame(
+  pop  = "teen",
+  Year = teen_yrs,
+  X    = numeric(length(teen_yrs)),
+  N    = numeric(length(teen_yrs))
+)
+
+for (i in seq_len(nrow(sim_teen))) {
+  samp_size        <- round(runif(1, 40, 70))
+  sim_teen$N[i]    <- samp_size * 5
+  sim_teen$X[i]    <- sum(
+    rbinom(
+      5,
+      samp_size,
+      phi_st[(teen_yrs[i] - 17):(teen_yrs[i] - 13)] * cov[18:14, 2]
+    )
+  )
+}
+
+# Simulate school-level data
+sch_yrs   <- 6:30
+nsch_base <- round(
+  rlnormTrunc(
+    sum(sch_per_cnty$n_sch), log(75), log(2.5),
+    min = 10, max = 450
+  )
+)
+kg_sim_full <- list()
+cnty_ids    <- rep(sch_per_cnty$enc_unit_id, times = sch_per_cnty$n_sch)
+
+for (s in seq_len(sum(sch_per_cnty$n_sch))) {
+  nsch    <- numeric(length(sch_yrs))
+  nsch[1] <- nsch_base[s]
+  for (y in 2:length(sch_yrs)) {
+    nsch[y] <- round(runif(1, min = nsch[y - 1] - 5, max = nsch[y - 1] + 5))
+    if (nsch[y] < 4) nsch[y] <- 4
+  }
+  offset   <- sch_offset[s] + cnty_offset[cnty_ids[s]]
+  cov_temp <- plogis(qlogis(phi_st[sch_yrs - 5]) + offset) * cov[5, 2]
+  kg_sim_full[[s]] <- data.frame(
+    year       = sch_yrs,
+    enc_unit_id = cnty_ids[s] + 1,
+    unit_id    = s,
+    y_obs      = rbinom(length(sch_yrs), nsch, cov_temp),
+    y_smp      = nsch
+  )
+}
+kg_sim_full <- bind_rows(kg_sim_full)
+
+# Simulate school vax view
+annual_tots <- kg_sim_full |>
+  group_by(year) |>
+  summarize(tot_enr = sum(y_smp), tot_vax = sum(y_obs))
+
+sim_school <- data.frame(
+  pop  = "school",
+  Year = annual_tots$year,
+  N    = round(annual_tots$tot_enr * 0.9),
+  X    = rbinom(
+    nrow(annual_tots),
+    round(annual_tots$tot_enr * 0.9),
+    phi_st[sch_yrs - 5] * cov[5, 2]
+  )
+)
+
+# Bind vax view simulation together
+vv_sim_full <- bind_rows(sim_child, sim_school, sim_teen)
+
+vv_sim <- vv_sim_full
+kg_sim <- kg_sim_full
+
+# Canonicalize IDs
+kg_sim <- kg_sim |>
+  group_by(unit_id) |>
+  mutate(unit_id = cur_group_id() + 4) |>
+  ungroup()
+
+# Assign county and school names
+county_names <- c("Scruggs", "Simone", "Watson")   # NC musicians
+school_names <- c(
+  # Native NC birds
+  "Chickadee Elementary",    "Nuthatch Academy",        "Blue Heron School",
+  "Flycatcher Elementary",   "Bluebird Learning Center","Catbird Academy",
+  "Finch Elementary",        "Sparrow School",          "Towhee Children's Academy",
+  "Warbler Elementary",      "Egret Elementary",        "Cardinal Academy",
+  "Bunting School",          "Tanager Academy",         "Oriole Youth Academy",
+  "Grosbeak Learning Center","Junco Elementary",        "Meadowlark School",
+  "Goldfinch Elementary",    "Mockingbird Academy",     "Kinglet Learning Center",
+  "Vireo School",            "Kingfisher Academy",      "Cormorant Elementary"
+)
+
+kg_sim$county <- county_names[kg_sim$enc_unit_id - 1]
+kg_sim$school <- school_names[kg_sim$unit_id - 4]
+
+kg_sim <- kg_sim |>
+  select(
+    loc_id     = school,
+    parent_id  = county,
+    year,
+    enc_unit_id,
+    unit_id,
+    y_obs,
+    y_smp
+  )
+
+vv_sim <- vv_sim |>
+  select(
+    vaxview_type = pop,
+    year         = Year,
+    age          = Age,
+    y_obs        = X,
+    y_smp        = N,
+    censored
+  ) |>
+  mutate(loc_id = "State")
+
+# Put years in calendar terms
+kg_sim$year <- kg_sim$year + 1995
+vv_sim$year <- vv_sim$year + 1995
+
+# Add weight / dose / lag-year info
+kg_sim$ly_min  <- 5
+kg_sim$ly_max  <- 5
+kg_sim$dose    <- 2
+kg_sim$weight  <- 1
+
+vv_sim$ly_min  <- NA_real_
+vv_sim$ly_max  <- NA_real_
+vv_sim$dose    <- NA_real_
+vv_sim$weight  <- NA_real_
+
+for (i in seq_len(nrow(vv_sim))) {
+  if (vv_sim$vaxview_type[i] == "school") {
+    vv_sim$ly_min[i]  <- 5
+    vv_sim$ly_max[i]  <- 5
+    vv_sim$dose[i]    <- 2
+    vv_sim$weight[i]  <- 1
+  } else if (vv_sim$vaxview_type[i] == "teen") {
+    vv_sim$ly_min[i]  <- 14
+    vv_sim$ly_max[i]  <- 18
+    vv_sim$dose[i]    <- 2
+    vv_sim$weight[i]  <- 1 / 5
+  } else if (vv_sim$age[i] == "24 months") {
+    vv_sim$ly_min[i]  <- 2
+    vv_sim$ly_max[i]  <- 2
+    vv_sim$dose[i]    <- 1
+    vv_sim$weight[i]  <- 1
+  } else {
+    vv_sim$ly_min[i]  <- 3
+    vv_sim$ly_max[i]  <- 3
+    vv_sim$dose[i]    <- 1
+    vv_sim$weight[i]  <- 1
+  }
+}
+
+observations_sim <- bind_rows(kg_sim, vv_sim |> mutate(unit_id = 1))
+
+# Normalise cohorts
+observations_sim <- observations_sim |>
+  mutate(
+    by_max     = year - ly_min,
+    by_min     = year - ly_max,
+    cohort_min = by_min - min(by_min) + 1,
+    cohort_max = by_max - min(by_min) + 1
+  ) |>
+  dplyr::select(-by_min, -by_max) |>
+  dplyr::rename(positive = "y_obs", sample_n = "y_smp")
+
+observations_sim$obs_id <- seq_len(nrow(observations_sim))
+observations_sim        <- setDT(observations_sim)
+
+# Create populations
+populations_sim <- data.frame(
+  obs_id  = numeric(),
+  loc_id  = character(),
+  cohort  = numeric(),
+  age     = numeric(),
+  dose    = numeric(),
+  weight  = numeric()
+)
+for (i in seq_len(nrow(observations_sim))) {
+  populations_sim <- bind_rows(
+    populations_sim,
+    data.frame(
+      obs_id = observations_sim$obs_id[i],
+      loc_id = observations_sim$loc_id[i],
+      cohort = observations_sim$cohort_max[i]:observations_sim$cohort_min[i],
+      age    = observations_sim$ly_min[i]:observations_sim$ly_max[i],
+      dose   = observations_sim$dose[i],
+      weight = observations_sim$weight[i]
+    )
+  )
+}
+setDT(populations_sim)
+
+# Create locations mapping
+locations_sim <- bind_rows(
+  data.frame(loc_id = "State",        parent_id = NA_character_),
+  data.frame(loc_id = county_names,   parent_id = "State"),
+  unique(
+    observations_sim |>
+      filter(loc_id != "State") |>
+      dplyr::select(loc_id, parent_id)
+  )
+)
+setDT(locations_sim)
+
+# Persist package data objects
+usethis::use_data(observations_sim, overwrite = TRUE)
+usethis::use_data(populations_sim,  overwrite = TRUE)
+usethis::use_data(locations_sim,    overwrite = TRUE)
+
+# True latent parameter values (for validation / vignettes)
+latent_params_sim <- list(
+  phi_state        = phi_st,
+  lambda           = lambda,
+  sigma_sch        = sigma_sch,
+  sigma_cnty       = sigma_cnty,
+  off_sch          = sch_offset,
+  off_cnty         = cnty_offset,
+  censor_reduction = other_vax_reduction,
+  uptake           = cov
+)
+
+# ---------------------------------------------------------------------------
+# Fit model
+# ---------------------------------------------------------------------------
+# stanfit objects bundle references to the compiled Stan model and can be
+# fragile across major rstan / StanHeaders updates.  Regenerate by running:
+#
+#     Rscript data-raw/fit_sim.R
+#
+# Empirical baseline (single chain, 100 iterations, after compilation):
+#   runtime: ~10 s | on-disk size (xz): ~1 MB (well under CRAN's 5 MB limit)
+# ---------------------------------------------------------------------------
+fit_sim <- suppressWarnings(
+  sampling(
+    observations_sim,
+    populations_sim,
+    locations_sim,
+    stan_opts = stan_options(
+      iter    = 1000,
+      chains  = 4,
+      refresh = 0,
+      seed    = 1L
+    )
+  )
+)
+
+usethis::use_data(fit_sim, compress = "xz", overwrite = TRUE)
+
+# Target populations for prediction
+target_sim <- create_target(
+  fit      = fit_sim,
+  location = unique(locations_sim$loc_id),
+  age      = 1:18,
+  cohort   = max(populations_sim$cohort) - 18,
+  dose     = c(1, 2),
+  mode     = "snapshot"
+)
+
+usethis::use_data(target_sim, overwrite = TRUE)
+
+# Compute true coverage for target_sim
+target_sim_dt <- as.data.table(target_sim)
+p_true        <- numeric(nrow(target_sim_dt))
+
+for (i in seq_len(nrow(target_sim_dt))) {
+  loc       <- target_sim_dt$loc_id[i]
+  cohort_val <- target_sim_dt$cohort[i]
+  age_val    <- target_sim_dt$age[i]
+  dose_val   <- target_sim_dt$dose[i]
+
+  if (loc == "State") {
+    offset <- 0
+  } else if (loc %in% county_names) {
+    c_idx  <- match(loc, county_names)
+    offset <- cnty_offset[c_idx]
+  } else {
+    s_idx  <- match(loc, school_names)
+    offset <- sch_offset[s_idx] + cnty_offset[cnty_ids[s_idx]]
+  }
+
+  p_true[i] <- stats::plogis(stats::qlogis(phi_st[cohort_val]) + offset) *
+    cov[age_val, dose_val]
+}
+
+latent_params_sim$coverage <- p_true
+usethis::use_data(latent_params_sim, overwrite = TRUE)
+
+# Keep a small posterior sub-sample so the fixture stays under CRAN's size
+# limit (full posterior draws produce a ~12 MB object; see imuGAP #86).
+predict_sim <- suppressWarnings(
+  predict(object = fit_sim, target = target_sim, posterior_size = 100)
+)
+
+usethis::use_data(predict_sim, compress = "xz", overwrite = TRUE)

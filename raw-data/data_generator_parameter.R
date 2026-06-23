@@ -17,12 +17,10 @@ print_sim_summary(sim3)
 
 # ── Lower overall coverage (shift phi_st down) ─────────────────
 low_phi <- sim$params  # just to see the default, then modify
-sim4 <- simulate_imuGAP_data(phi_st = rep(0.75, 30))
-
-
+sim4 <- simulate_imuGAP_data(phi_st = rep(0.5, 30))
 
 # ── Access the tables directly ─────────────────────────────────
-nc_locations <- sim$observations
+nc_observation<- sim$observations
 nc_populations <- sim$populations
 nc_locations <- sim$locations
 
@@ -180,7 +178,7 @@ saveRDS(predict_sim, "predict_sim1.rds")
 
 
 
-nc_locations <- sim4$observations
+nc_observation <- sim4$observations
 nc_populations <- sim4$populations
 nc_locations <- sim4$locations
 

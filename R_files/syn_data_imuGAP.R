@@ -91,19 +91,21 @@ predict_sim <- predict(object = fit_sim, target = target_sim, posterior_size = 1
 summary_predict <- summary(predict_sim)
 head(summary_predict)
 
+mcv1_baseline <- subset(summary_predict, dose == 1)
+write.csv(mcv1_baseline, "mcv1_coverage_baseline.csv", row.names = FALSE)
 
 summary_predict |>
-  subset(loc_id == "State" & dose == 2 & age > 4) |>
+  subset(loc_id == "State" & dose == 1 & age > 4) |>
   ggplot() +
   aes(x = age) +
   geom_line(aes(y = q50)) +
   geom_ribbon(aes(ymin = q2_5, ymax = q97_5), alpha = 0.5) +
   theme_bw() +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
-  labs(x = "Age", y = "Coverage", title = "State-level two dose coverage")
+  labs(x = "Age", y = "Coverage", title = "State-level MCV1 (one-dose) coverage")
 
 summary_predict |>
-  subset(loc_id %in% c("Scruggs", "Simone", "Watson") & dose == 2 & age > 4) |>
+  subset(loc_id %in% c("Scruggs", "Simone", "Watson") & dose == 1 & age > 4) |>
   ggplot() +
   aes(x = age) +
   geom_line(aes(y = q50, color = loc_id)) +
@@ -116,20 +118,20 @@ summary_predict |>
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
   scale_color_discrete(NULL, aesthetics = c("color", "fill")) +
   labs(
-    x = "Age", y = "Coverage", title = "County-level two dose coverage"
+    x = "Age", y = "Coverage", title = "County-level MCV1 (one-dose) coverage"
   )
 
   scruggs_schools <- locations_sim[parent_id == "Scruggs", loc_id]
 summary_predict |>
   subset(
-    loc_id %in% scruggs_schools & dose == 2 & age > 4
+    loc_id %in% scruggs_schools & dose == 1 & age > 4
   ) |>
   ggplot() +
   geom_boxplot(aes(x = factor(age), y = q50)) +
   theme_bw() +
   labs(
     x = "Age", y = "Coverage",
-    title = "Distribution of School-Level Coverage For Scruggs County"
+    title = "Scruggs County school-level MCV1 (one-dose) coverage"
   )
 
 
@@ -141,7 +143,7 @@ summary_predict |>
 
 # Subset to targets of interest (all retained posterior draws)
 predict_sub <- predict_sim |>
-  subset(loc_id %in% schools & dose == 2 & age > 4)
+  subset(loc_id %in% schools & dose == 1 & age > 4)
 
 # Get the pre-computed background coverage matching the subsetted target
 latent_ref <- copy(predict_sub$target)

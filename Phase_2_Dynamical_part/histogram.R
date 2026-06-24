@@ -49,21 +49,11 @@ for (t in 1:13) {
 }
 
 
-final_values <- sapply(step_t_rf, function(df) tail(df[[t]], 1))
-
-summary_table <- data.frame(
-  List_Item = 1:length(step_t_rf),
-  Final_Infections = final_values
-)
-
 #function that get the list of final value
 list_for <- function(t){
   final_values <-rep(1,length.out = 100)
    for (j in 1:100){
     final_values[j]<-tail(all_rf[[t]][[j]],n= 1)[1]}
-  summary_table <- data.frame(
-    List_Item = 1:length(step_t_rf),
-    Final_Infections = final_values)
   return(unlist(final_values))
 }
 
@@ -71,7 +61,7 @@ list_for(1)
 #function lpot
 plot_histogram_for <-function(t)
 {   df <- data.frame(value = list_for(t))
-    ggplot(df, aes(x = value)) + 
+    ggplot(df, aes(x = .data$value)) + 
   geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
   labs(title = "Histogram with ggplot2")
 }
@@ -92,17 +82,61 @@ for(i in 1:13){
     cumulative_infection = list_for(i))
     DT <- bind_rows(DT,dt) 
 }
-dt
-dt <- as.data.frame(all_rf)
-
 head(DT)
 
-ggplot(DT|>filter(year %in% c(1,4,7,10,13)), aes(x = cumulative_infection)) + 
-  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
-  labs(title = "Histogram with ggplot2")+facet_wrap(~year)
+selected_years <- as.integer(round(seq(1, 13, length.out = 6)))
 
-head(df)
-all_rf_df
+histogram_plot <- ggplot(
+  DT |> filter(year %in% selected_years),
+  aes(x = cumulative_infection)
+) +
+  geom_histogram(
+    binwidth = 2,
+    fill     = "#377eb8",
+    color    = "white",
+    linewidth = 0.25
+  ) +
+  facet_wrap(
+    ~ year,
+    nrow     = 2,
+    ncol     = 3,
+    scales   = "free_y",
+    labeller = labeller(year = function(x) paste("Rolling window", x))
+  ) +
+  labs(
+    title    = "Distribution of cumulative infections across simulation runs",
+    subtitle = paste0(
+      "Reed-Frost SEIR · N = ", total_pop,
+      " · p = ", p_contact,
+      " · 100 simulations per window"
+    ),
+    x = "Cumulative infections",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title         = element_text(face = "bold", size = 24, hjust = 0.5),
+    plot.subtitle      = element_text(size = 13, color = "gray40", hjust = 0.5,
+                                      margin = margin(b = 8)),
+    strip.text         = element_text(face = "bold", size = 15),
+    strip.background   = element_rect(fill = "gray92", color = NA),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_line(color = "gray90", linewidth = 0.4),
+    panel.spacing.x    = unit(0.8, "lines"),
+    panel.spacing.y    = unit(0.7, "lines"),
+    axis.title         = element_text(face = "bold", size = 14),
+    axis.text          = element_text(size = 11),
+    plot.margin        = margin(8, 12, 8, 10)
+  )
 
-dim(df)
-all_rf
+print(histogram_plot)
+
+ggsave(
+  "./Phase_2_Dynamical_part/cumulative_infection_histograms.png",
+  histogram_plot,
+  width  = 13.33,
+  height = 7.5,
+  dpi    = 300,
+  bg     = "white"
+)

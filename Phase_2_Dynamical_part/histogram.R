@@ -65,6 +65,8 @@ list_for <- function(t){
     Final_Infections = final_values)
   return(unlist(final_values))
 }
+
+list_for(1)
 #function lpot
 plot_histogram_for <-function(t)
 {   df <- data.frame(value = list_for(t))
@@ -74,8 +76,21 @@ plot_histogram_for <-function(t)
 }
 
 #change the argument to plot the hoistogram (argument between 1 and 13)
-plot_histogram_for(5)
 
+#How are we going to plot the result for all the 13 years
+plot_histogram_for(1)
+plot_histogram_for(4)
+plot_histogram_for(7)
+plot_histogram_for(10)
+plot_histogram_for(13)
 
+for()
+as.data.frame(all_rf[[ii]])[21,]
 
+df <- as.data.frame(all_rf)
 
+head(df)
+all_rf_df
+
+dim(df)
+all_rf

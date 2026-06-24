@@ -1,5 +1,5 @@
 library(ggplot2)
-base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation")
+base_dir <- "."
 setwd(base_dir)
 source("raw-data/simulate_imuGAP_data.R")
 
@@ -30,7 +30,7 @@ nc_locations <- sim$locations
 
 
 # Define base directory (change as needed; here assumes script run from project root, or set to your data root)
-base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data")
+base_dir <- file.path("data")
 derived_dir <- file.path(base_dir, "derived")
 
 
@@ -189,7 +189,7 @@ nc_locations <- sim4$locations
 
 
 # Define base directory (change as needed; here assumes script run from project root, or set to your data root)
-base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data")
+base_dir <- file.path("data")
 derived_dir <- file.path(base_dir, "derived")
 
 

@@ -28,7 +28,7 @@ canonical_populations <- canonicalize_populations(
 )
 head(canonical_populations)
 # Define base directory (change as needed; here assumes script run from project root, or set to your data root)
-base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation/data")
+base_dir <- file.path("data")
 derived_dir <- file.path(base_dir, "derived")
 
 

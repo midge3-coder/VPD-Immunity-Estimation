@@ -2,7 +2,7 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 
-base_dir <- file.path("~/Downloads/MMEDGit/VPD-Immunity-Estimation")
+base_dir <- "."
 setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
 

@@ -1,6 +1,6 @@
-setwd() 
-#maybe have to change this to the directory where the data is stored on your computer
-school <- read.csv("~/Downloads/MMEDGit/VPD-Immunity-Estimation/all-schools.csv")
+# setwd() is not needed if running from the root of the repo
+# maybe have to change this to the directory where the data is stored on your computer
+school <- read.csv("data/all-schools.csv")
 
 #summary of the data
 summary(school)

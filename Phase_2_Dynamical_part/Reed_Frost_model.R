@@ -8,6 +8,7 @@ library(tidyverse)
 ## I[t]   -> Active infectious individuals (equal to E[t-1])
 ## R[t]   -> Removed/Recovered individuals (accumulated from I[t-1])
 
+
 simulate_reed_frost_seir <- function(generations, y0, p) {
   # Initialize vectors to store states over time
   S <- numeric(generations + 1)

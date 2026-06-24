@@ -105,7 +105,7 @@ plot_simulation <- ggplot(all_rf_df) +
   labs(
     title    = "Reed-Frost SEIR simulations across rolling immunity windows",
     subtitle = paste0(
-      "17 simulations (rolling 18-month coverage windows) · ",
+      "17 simulations (rolling 18 successive years coverage windows) · ",
       "N = ", format(total_pop, big.mark = ","),
       " · p = ", p_contact,
       " · ", generations_count, " generations"

@@ -164,3 +164,5 @@ plot_simulation <- ggplot(all_rf_df) +
 
 # Display plot
 print(plot_simulation)
+#Histogram 
+all_rf_df |> subset(Compartment == "Cumulative Infections") |> group_by(run) |> summarize(max_value = max(count)) |> ggplot() + aes(x = max_value) + geom_histogram() + theme_minimal()

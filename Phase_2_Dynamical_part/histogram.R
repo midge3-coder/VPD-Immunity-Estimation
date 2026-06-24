@@ -3,6 +3,7 @@ library(tidyr)
 library(dplyr)
 library(knitr)
 
+
 base_dir <- "."
 setwd(base_dir)
 source("./Phase_2_Dynamical_part/Reed_Frost_model.R")
@@ -84,10 +85,21 @@ plot_histogram_for(7)
 plot_histogram_for(10)
 plot_histogram_for(13)
 
-for()
-as.data.frame(all_rf[[ii]])[21,]
+DT <- data.frame()
 
-df <- as.data.frame(all_rf)
+for(i in 1:13){
+    dt<-data.frame(year=i,
+    cumulative_infection = list_for(i))
+    DT <- bind_rows(DT,dt) 
+}
+dt
+dt <- as.data.frame(all_rf)
+
+head(DT)
+
+ggplot(DT|>filter(year %in% c(1,4,7,10,13)), aes(x = cumulative_infection)) + 
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(title = "Histogram with ggplot2")+facet_wrap(~year)
 
 head(df)
 all_rf_df

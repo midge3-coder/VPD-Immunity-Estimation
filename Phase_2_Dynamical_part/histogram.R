@@ -105,7 +105,10 @@ for(i in seq_len(number_of_windows)){
     DT <- bind_rows(DT, dt) 
 }
 
-selected_years <- tail(seq_len(number_of_windows), 5)
+
+selected_years <- seq(from = 1, to = number_of_windows , by = 3)
+
+selected_years <- c(selected_years,tail(seq(number_of_windows),1))
 
 # Show the final five rolling windows instead of plotting all panels.
 histogram_plot <- ggplot(
@@ -132,7 +135,7 @@ histogram_plot <- ggplot(
       "Reed-Frost SEIR · N = ", total_pop,
       " · p = ", p_contact,
       " · ", number_of_simulation, " simulations per window",
-      " · final 5 rolling windows"
+      " · final 6 rolling windows"
     ),
     x = "Cumulative infections",
     y = "Count"

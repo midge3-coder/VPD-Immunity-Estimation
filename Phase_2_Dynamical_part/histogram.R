@@ -15,16 +15,18 @@ average4 <- readRDS("average_4.rds")
 # Scale by cohort size (30 students per grade) over 14 grades
 ave1 <- 30 * average1$mean_coverage   # length 14
 ave4 <- 30 * average4$mean_coverage   # length 14
+average1$mean_coverage
+
 ave  <- c(ave1, ave4)                 # length 28
 
 generations_count <- 20
 total_pop         <- 14 * 30          # 420
-p_contact         <- 0.04
+p_contact         <- 0.02
 
-all_rf <- vector("list", 13) # Explicitly sized for the 17 rolling windows
+all_rf <- vector("list", 14) # Explicitly sized for the 17 rolling windows
 
-for (t in 1:13) {
-  idx <- t:(t + 13)
+for (t in 1:14) {
+  idx <- t:(t + 14)
   idx <- idx[idx <= length(ave)]
   R0  <- round(sum(ave[idx]))
   
@@ -87,7 +89,7 @@ plot_histogram_for(13)
 
 DT <- data.frame()
 
-for(i in 1:13){
+for(i in 1:14){
     dt<-data.frame(year=i,
     cumulative_infection = list_for(i))
     DT <- bind_rows(DT,dt) 
@@ -97,7 +99,7 @@ dt <- as.data.frame(all_rf)
 
 head(DT)
 
-ggplot(DT|>filter(year %in% c(1,4,7,10,13)), aes(x = cumulative_infection)) + 
+ggplot(DT|>filter(year %in% c(1,4,7,10,14)), aes(x = cumulative_infection)) + 
   geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
   labs(title = "Histogram with ggplot2")+facet_wrap(~year)
 

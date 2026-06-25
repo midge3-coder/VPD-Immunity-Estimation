@@ -24,10 +24,10 @@ generations_count <- 20
 total_pop         <- 14 * 30          # 420
 p_contact         <- 0.02
 
-all_rf <- vector("list", 14) # Explicitly sized for the 17 rolling windows
+all_rf <- vector("list", 15) # Explicitly sized for the rolling windows
 
-for (t in 1:14) {
-  idx <- t:(t + 14)
+for (t in 1:15) {
+  idx <- t:(t + 13)
   idx <- idx[idx <= length(ave)]
   R0  <- round(sum(ave[idx]))
   
@@ -82,9 +82,9 @@ plot_histogram_for <-function(t)
   )
 }
 
-#change the argument to plot the hoistogram (argument between 1 and 13)
+#change the argument to plot the hoistogram (argument between 1 and 15)
 
-#How are we going to plot the result for all the 13 years
+#How are we going to plot representative results for the 15 rolling windows
 plot_histogram_for(1)
 plot_histogram_for(4)
 plot_histogram_for(7)
@@ -93,16 +93,16 @@ plot_histogram_for(13)
 
 DT <- data.frame()
 
-for(i in 1:14){
+for(i in 1:15){
     dt<-data.frame(year=i,
     cumulative_infection = list_for(i))
     DT <- bind_rows(DT,dt) 
 }
 head(DT)
 
-selected_years <- as.integer(round(seq(1, 13, length.out = 6)))
+selected_years <- as.integer(round(seq(1, 15, length.out = 6)))
 
-# Show representative rolling windows instead of plotting all 13 panels.
+# Show representative rolling windows instead of plotting all 15 panels.
 histogram_plot <- ggplot(
   DT |> filter(year %in% selected_years),
   aes(x = cumulative_infection)

@@ -76,13 +76,25 @@ rf_long <- rf_data |>
   mutate(Compartment = factor(Compartment, levels = c('S', 'E', 'I', 'R')))
 
 ggplot(rf_long, aes(x = Generation, y = count, color = Compartment)) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 2) +
+  geom_line(linewidth = 1.35) +
+  geom_point(size = 2.4, alpha = 0.9) +
   labs(
     title = "Reed-Frost SEIR Chain-Binomial Simulation", 
-    y = "Count", 
-    x = "Generation Step"
+    subtitle = paste0("N = ", pop, " · p = ", p_contact, " · ", generations_count, " generations"),
+    y = "Individuals",
+    x = "Generation step",
+    color = "Compartment"
   ) +
-  theme_minimal(base_size = 14) +
-  scale_color_manual(values = c("S" = "#377eb8", "E" = "#ff7f00", "I" = "#e41a1c", "R" = "#4daf4a"))
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 20),
+    plot.subtitle    = element_text(color = "gray35", size = 14),
+    axis.title       = element_text(face = "bold"),
+    legend.position  = "bottom",
+    legend.title     = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  ) +
+  scale_color_manual(
+    values = c("S" = "#377eb8", "E" = "#ff7f00", "I" = "#e41a1c", "R" = "#4daf4a")
+  )
 

@@ -64,8 +64,20 @@ list_for(1)
 plot_histogram_for <-function(t)
 {   df <- data.frame(value = list_for(t))
     ggplot(df, aes(x = .data$value)) + 
-  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
-  labs(title = "Histogram with ggplot2")
+  geom_histogram(binwidth = 1, fill = "#377eb8", color = "white", linewidth = 0.25) +
+  labs(
+    title = paste("Cumulative infections for rolling window", t),
+    subtitle = "100 stochastic Reed-Frost simulations",
+    x = "Cumulative infections",
+    y = "Simulation count"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 20),
+    plot.subtitle    = element_text(color = "gray35", size = 14),
+    axis.title       = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
 }
 
 #change the argument to plot the hoistogram (argument between 1 and 13)
@@ -106,6 +118,7 @@ histogram_plot <- ggplot(
     scales   = "free_y",
     labeller = labeller(year = function(x) paste("Rolling window", x))
   ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
   labs(
     title    = "Distribution of cumulative infections across simulation runs",
     subtitle = paste0(
@@ -119,7 +132,7 @@ histogram_plot <- ggplot(
   theme_minimal(base_size = 16) +
   theme(
     plot.title         = element_text(face = "bold", size = 24, hjust = 0.5),
-    plot.subtitle      = element_text(size = 13, color = "gray40", hjust = 0.5,
+    plot.subtitle      = element_text(size = 14, color = "gray35", hjust = 0.5,
                                       margin = margin(b = 8)),
     strip.text         = element_text(face = "bold", size = 15),
     strip.background   = element_rect(fill = "gray92", color = NA),
@@ -129,7 +142,7 @@ histogram_plot <- ggplot(
     panel.spacing.x    = unit(0.8, "lines"),
     panel.spacing.y    = unit(0.7, "lines"),
     axis.title         = element_text(face = "bold", size = 14),
-    axis.text          = element_text(size = 11),
+    axis.text          = element_text(size = 12),
     plot.margin        = margin(8, 12, 8, 10)
   )
 
@@ -138,8 +151,8 @@ print(histogram_plot)
 ggsave(
   "./Phase_2_Dynamical_part/cumulative_infection_histograms.png",
   histogram_plot,
-  width  = 13.33,
-  height = 7.5,
+  width  = 14,
+  height = 8,
   dpi    = 300,
   bg     = "white"
 )

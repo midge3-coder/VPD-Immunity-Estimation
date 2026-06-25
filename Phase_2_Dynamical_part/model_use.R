@@ -121,7 +121,7 @@ compartment_colors <- c(
 plot_simulation <- ggplot(all_rf_df) +
   geom_line(
     aes(x = Generation, y = count, group = run),
-    color = "gray75",
+    color = "gray78",
     linewidth = 0.45,
     alpha = 0.7
   ) +
@@ -153,19 +153,37 @@ plot_simulation <- ggplot(all_rf_df) +
     y        = "Individuals",
     caption  = "Gray lines: individual runs · Colored lines: median across runs"
   ) +
-  theme_minimal(base_size = 13) +
+  theme_minimal(base_size = 16) +
   theme(
-    plot.title         = element_text(face = "bold", size = 14),
-    plot.subtitle      = element_text(color = "gray40", size = 11),
-    plot.caption       = element_text(color = "gray50", size = 9, hjust = 0),
-    strip.text         = element_text(face = "bold"),
+    plot.title         = element_text(face = "bold", size = 20),
+    plot.subtitle      = element_text(color = "gray35", size = 14),
+    plot.caption       = element_text(color = "gray50", size = 11, hjust = 0),
+    strip.text         = element_text(face = "bold", size = 14),
     legend.position    = "bottom",
     legend.title       = element_text(face = "bold"),
     panel.grid.minor   = element_blank(),
-    axis.title         = element_text(face = "bold")
+    panel.spacing      = unit(0.9, "lines"),
+    axis.title         = element_text(face = "bold"),
+    axis.text          = element_text(size = 12)
   )
 
 # Display plot
 print(plot_simulation)
 #Histogram 
-all_rf_df |> subset(Compartment == "Cumulative Infections") |> group_by(run) |> summarize(max_value = max(count)) |> ggplot() + aes(x = max_value) + geom_histogram() + theme_minimal()
+all_rf_df |>
+  subset(Compartment == "Cumulative Infections") |>
+  group_by(run) |>
+  summarize(max_value = max(count)) |>
+  ggplot(aes(x = max_value)) +
+  geom_histogram(binwidth = 2, fill = "#377eb8", color = "white", linewidth = 0.25) +
+  labs(
+    title = "Maximum cumulative infections by rolling window",
+    x = "Maximum cumulative infections",
+    y = "Number of windows"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title       = element_text(face = "bold", size = 20),
+    axis.title       = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )

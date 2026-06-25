@@ -3,6 +3,25 @@ library(data.table)
 library(plyr)
 library(ggplot2)
 
+# Consistent report styling for coverage plots.
+coverage_theme <- function(base_size = 16) {
+  theme_bw(base_size = base_size) +
+    theme(
+      plot.title       = element_text(face = "bold", size = base_size + 3),
+      plot.subtitle    = element_text(color = "gray35", size = base_size - 1),
+      axis.title       = element_text(face = "bold"),
+      legend.position  = "bottom",
+      legend.title     = element_text(face = "bold"),
+      panel.grid.minor = element_blank()
+    )
+}
+
+county_colors <- c(
+  "Scruggs" = "#1b9e77",
+  "Simone"  = "#d95f02",
+  "Watson"  = "#7570b3"
+)
+
 #step 1: load the data
 
 # Start from imuGAP's built-in synthetic fixture to learn the expected schemas.
@@ -102,27 +121,34 @@ summary_predict |>
   subset(loc_id == "State" & dose == 1 & age > 4) |>
   ggplot() +
   aes(x = age) +
-  geom_line(aes(y = q50)) +
-  geom_ribbon(aes(ymin = q2_5, ymax = q97_5), alpha = 0.5) +
-  theme_bw() +
+  geom_ribbon(aes(ymin = q2_5, ymax = q97_5, fill = "95% credible interval"),
+              alpha = 0.22, color = NA) +
+  geom_line(aes(y = q50, color = "Median"), linewidth = 1.3) +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
-  labs(x = "Age", y = "Coverage", title = "State-level MCV1 (one-dose) coverage")
+  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  scale_color_manual(NULL, values = c("Median" = "#1b9e77")) +
+  scale_fill_manual(NULL, values = c("95% credible interval" = "#1b9e77")) +
+  coverage_theme() +
+  labs(
+    x = "Age", y = "Coverage",
+    title = "State-level MCV1 coverage",
+    subtitle = "Median posterior estimate with 95% credible interval"
+  )
 
 summary_predict |>
   subset(loc_id %in% c("Scruggs", "Simone", "Watson") & dose == 1 & age > 4) |>
   ggplot() +
   aes(x = age) +
-  geom_line(aes(y = q50, color = loc_id)) +
-  geom_ribbon(aes(ymin = q2_5, ymax = q97_5, fill = loc_id), alpha = 0.2) +
-  theme_bw() +
-  theme(
-    legend.position = "inside", legend.position.inside = c(.2, 0.05),
-    legend.justification.inside = c(0, 0)
-  ) +
+  geom_ribbon(aes(ymin = q2_5, ymax = q97_5, fill = loc_id), alpha = 0.16, color = NA) +
+  geom_line(aes(y = q50, color = loc_id), linewidth = 1.25) +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
-  scale_color_discrete(NULL, aesthetics = c("color", "fill")) +
+  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  scale_color_manual("County", values = county_colors, aesthetics = c("color", "fill")) +
+  coverage_theme() +
   labs(
-    x = "Age", y = "Coverage", title = "County-level MCV1 (one-dose) coverage"
+    x = "Age", y = "Coverage",
+    title = "County-level MCV1 coverage",
+    subtitle = "Median posterior estimate with uncertainty ribbons"
   )
 
   scruggs_schools <- locations_sim[parent_id == "Scruggs", loc_id]
@@ -131,11 +157,15 @@ summary_predict |>
     loc_id %in% scruggs_schools & dose == 1 & age > 4
   ) |>
   ggplot() +
-  geom_boxplot(aes(x = factor(age), y = q50)) +
-  theme_bw() +
+  geom_boxplot(aes(x = factor(age), y = q50),
+               fill = "#9ecae1", color = "#08519c",
+               linewidth = 0.6, outlier.alpha = 0.6) +
+  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  coverage_theme() +
   labs(
-    x = "Age", y = "Coverage",
-    title = "Scruggs County school-level MCV1 (one-dose) coverage"
+    x = "Age", y = "Median coverage",
+    title = "School-level MCV1 coverage in Scruggs County",
+    subtitle = "Distribution across schools by age"
   )
 
 
@@ -162,7 +192,7 @@ ggplot() +
   aes(age, coverage, color = loc_id) +
   geom_point(
     data = draws_df,
-    alpha = 1 / 256, shape = 16,
+    alpha = 0.08, shape = 16, size = 1.3,
     position = position_jitterdodge(
       dodge.width = 0.5,
       jitter.width = 0.15
@@ -170,15 +200,22 @@ ggplot() +
   ) +
   geom_point(
     data = latent_ref,
-    mapping = aes(shape = "True value"),
-    fill = NA
+    mapping = aes(shape = "Latent true value"),
+    fill = "white",
+    color = "black",
+    size = 3,
+    stroke = 1.1
   ) +
-  theme_bw() +
   scale_shape_manual(
     name = "",
-    values = c("True value" = 24)
+    values = c("Latent true value" = 24)
   ) +
   scale_color_discrete(NULL, aesthetics = c("color", "fill")) +
   scale_x_continuous(breaks = 5:18, minor_breaks = NULL) +
-  theme(legend.position = "bottom") +
-  labs(color = "School", x = "Age", y = "Coverage")
+  scale_y_continuous(labels = function(x) paste0(round(100 * x), "%")) +
+  coverage_theme() +
+  labs(
+    color = "School", x = "Age", y = "Coverage",
+    title = "Posterior draws for selected schools",
+    subtitle = "Jittered draws with latent true values highlighted"
+  )

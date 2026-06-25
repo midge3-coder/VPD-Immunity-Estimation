@@ -21,7 +21,7 @@ generations_count <- 20
 total_pop         <- 14 * 30          # 420
 p_contact         <- 0.04
 
-all_rf <- vector("list", 17) # Explicitly sized for the 17 rolling windows
+all_rf <- vector("list", 15) # Explicitly sized for the 17 rolling windows
 
 for (t in 1:15) {
   idx <- t:(t + 13)
@@ -143,7 +143,7 @@ plot_simulation <- ggplot(all_rf_df) +
   labs(
     title    = "Reed-Frost SEIR simulations across rolling immunity windows",
     subtitle = paste0(
-      "17 simulations (rolling 18 successive years coverage windows) · ",
+      "14 simulations (rolling 15 successive years coverage windows) · ",
       "N = ", format(total_pop, big.mark = ","),
       " · p = ", p_contact,
       " · ", generations_count, " generations"
